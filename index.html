@@ -1,10 +1,12 @@
+
+    
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Greaselog Staging GUI</title>
-    <!-- Tailwind CSS Engine for UI Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
@@ -13,7 +15,6 @@
         <h1 class="text-2xl font-bold mb-2 text-indigo-400">⚡ Greaselog Smart Input</h1>
         <p class="text-sm text-gray-400 mb-6">Type your vehicle configurations naturally. No rigid dropdown arrays.</p>
 
-        <!-- Dynamic Asset Submission Form -->
         <div class="space-y-4">
             <div>
                 <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Vehicle Entry String</label>
@@ -26,13 +27,11 @@
             </button>
         </div>
 
-        <!-- Terminal Status Monitoring Box -->
-        <div id="statusBox" class="mt-6 p-4 rounded-lg bg-gray-900 border border-gray-800 text-xs font-mono hidden">
-            <p id="statusText" class="text-gray-400">Awaiting user input execution...</p>
+        <div id="statusBox" class="mt-6 p-4 rounded-lg bg-gray-900 border border-gray-800 text-xs font-mono">
+            <p id="statusText" class="text-gray-400">System Ready. Awaiting user input...</p>
         </div>
     </div>
 
-    <!-- CDN Framework Integration for Serverless DB Operations -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // CONFIGURATION: Insert your live Supabase API endpoints here
@@ -49,30 +48,28 @@
             const rawText = smartInput.value.trim();
             if(!rawText) return alert("Please type something first!");
 
-            // Trigger active UI state indicators
-            statusBox.classList.remove('hidden');
             statusText.className = "text-yellow-400 animate-pulse";
-            statusText.innerText = "Processing custom regex logic & executing database pipeline...";
+            statusText.innerText = "Connecting to Supabase database...";
 
             try {
-                // 1. Establish or read valid multi-tenant Household reference
-let { data: household, error: fetchErr } = await supabase.from('households').select('*');
-let householdId;
+                // 1. Establish or read valid Household reference
+                let { data: household, error: fetchErr } = await supabase.from('households').select('*');
+                if (fetchErr) throw new Error("Household fetch failed: " + fetchErr.message);
+                
+                let householdId;
 
-if (household && household.length > 0) {
-    // A household exists, use it
-    householdId = household[0].id;
-} else {
-    // No household exists yet, let's create the very first one right now
-    const { data: newH, error: hErr } = await supabase
-        .from('households')
-        .insert([{ name: "My Project Garage" }])
-        .select();
-
-    if (hErr) throw hErr;
-    if (!newH || newH.length === 0) throw new Error("Database failed to return the new household row.");
-    householdId = newH[0].id;
-}
+                if (household && household.length > 0) {
+                    householdId = household[0].id;
+                } else {
+                    statusText.innerText = "No household found. Creating a new one...";
+                    const { data: newH, error: hErr } = await supabase
+                        .from('households')
+                        .insert([{ name: "My Project Garage" }])
+                        .select();
+                        
+                    if (hErr) throw hErr;
+                    householdId = newH[0].id;
+                }
 
                 // 2. Client Side Parsing Layer (Isolates metadata from string)
                 const yearMatch = rawText.match(/\b(19\d{2}|20\d{2})\b/);
@@ -89,21 +86,28 @@ if (household && household.length > 0) {
                     }
                 };
 
+                statusText.innerText = "Household verified. Saving vehicle profile...";
+
                 // 3. Inject record into PostgreSQL table
-                const { data: vehicle, error: vErr } = await supabase.from('vehicles').insert([payload]).select().single();
+                const { data: vehicle, error: vErr } = await supabase
+                    .from('vehicles')
+                    .insert([payload])
+                    .select();
+                    
                 if (vErr) throw vErr;
 
                 // Build complete verification display output
                 statusText.className = "text-green-400";
                 statusText.innerHTML = `🎉 <b>SUCCESS!</b> Database record synchronized.<br/><br/>` +
-                                       `<b>Row UUID:</b> ${vehicle.id}<br/>` +
-                                       `<b>Extracted JSONB Core:</b> ${JSON.stringify(vehicle.custom_spec_fields)}`;
+                                       `<b>Row UUID:</b> ${vehicle[0].id}<br/>` +
+                                       `<b>Extracted Specs:</b> ${JSON.stringify(vehicle[0].custom_spec_fields)}`;
                 
                 smartInput.value = ""; // Clear input for standard loop reset
 
             } catch (error) {
                 statusText.className = "text-red-400";
                 statusText.innerText = `❌ Error routing record: ${error.message}`;
+                console.error(error);
             }
         });
     </script>
