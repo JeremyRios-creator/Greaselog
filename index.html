@@ -1,67 +1,59 @@
+      
 
-    
-
-<!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Greaselog Staging GUI</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Greaselog Raw Debug Terminal</title>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
+<body style="background-color: #111827; color: #ffffff; font-family: monospace; padding: 20px;">
 
-    <div class="max-w-md w-full bg-gray-800 p-6 rounded-xl shadow-2xl border border-gray-700">
-        <h1 class="text-2xl font-bold mb-2 text-indigo-400">⚡ Greaselog Smart Input</h1>
-        <p class="text-sm text-gray-400 mb-6">Type your vehicle configurations naturally. No rigid dropdown arrays.</p>
+    <h1>⚡ Greaselog Debug Terminal</h1>
+    <p>Frameworks stripped. Direct native browser execution loop.</p>
 
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Vehicle Entry String</label>
-                <input id="smartInput" type="text" placeholder="e.g., 1969 Cougar 351c Restoration" 
-                       class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-200 focus:outline-none focus:border-indigo-500 transition-colors">
-            </div>
+    <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 8px;">Vehicle Entry String:</label>
+        <input id="smartInput" type="text" placeholder="e.g., 1969 Cougar 351c Restoration" style="width: 300px; padding: 10px;">
+        <button id="submitBtn" style="padding: 10px 20px; cursor: pointer;">Log Asset</button>
+    </div>
 
-            <button id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-colors shadow-lg">
-                Log Asset to Supabase Table
-            </button>
-        </div>
-
-        <div id="statusBox" class="mt-6 p-4 rounded-lg bg-gray-900 border border-gray-800 text-xs font-mono">
-            <p id="statusText" class="text-gray-400">System Ready. Awaiting user input...</p>
-        </div>
+    <div style="background-color: #000000; padding: 15px; border: 1px solid #374151; min-height: 50px;">
+        <div id="statusText" style="color: #9ca3af;">System Terminal Idle. Ready for input...</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // CONFIGURATION: Insert your live Supabase API endpoints here
+          // CONFIGURATION: Insert your live Supabase API endpoints here
         const supabaseUrl = https://qjiwirnetqvynraphzfg.supabase.co/rest/v1/;
         const supabaseKey = sb_publishable_uPajrAE_ijWlRtwzzmBmgw_SuqKDgOy;
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         const submitBtn = document.getElementById('submitBtn');
         const smartInput = document.getElementById('smartInput');
-        const statusBox = document.getElementById('statusBox');
         const statusText = document.getElementById('statusText');
 
         submitBtn.addEventListener('click', async () => {
             const rawText = smartInput.value.trim();
-            if(!rawText) return alert("Please type something first!");
+            if(!rawText) {
+                alert("Input empty!");
+                return;
+            }
 
-            statusText.className = "text-yellow-400 animate-pulse";
-            statusText.innerText = "Connecting to Supabase database...";
+            statusText.style.color = "#fbbf24";
+            statusText.innerText = "Data packet outbound to Supabase server...";
 
             try {
-                // 1. Establish or read valid Household reference
+                // 1. Check or generate an operational Household container
                 let { data: household, error: fetchErr } = await supabase.from('households').select('*');
-                if (fetchErr) throw new Error("Household fetch failed: " + fetchErr.message);
+                if (fetchErr) throw new Error("Household read failed: " + fetchErr.message);
                 
                 let householdId;
 
                 if (household && household.length > 0) {
                     householdId = household[0].id;
                 } else {
-                    statusText.innerText = "No household found. Creating a new one...";
+                    statusText.innerText = "No baseline household detected. Injecting first container row...";
                     const { data: newH, error: hErr } = await supabase
                         .from('households')
                         .insert([{ name: "My Project Garage" }])
@@ -71,7 +63,7 @@
                     householdId = newH[0].id;
                 }
 
-                // 2. Client Side Parsing Layer (Isolates metadata from string)
+                // 2. Client side string analytics processing (Fuzzy matching)
                 const yearMatch = rawText.match(/\b(19\d{2}|20\d{2})\b/);
                 const engineMatch = rawText.match(/\b(\d\.\d[L|l]|\d{3}[c|c_i_d])\b/i);
 
@@ -82,13 +74,13 @@
                     custom_spec_fields: {
                         detected_year: yearMatch ? yearMatch[0] : "Not Specified",
                         detected_engine: engineMatch ? engineMatch[0] : "Not Specified",
-                        status: "Active Tracking Loop"
+                        status: "Raw Debug Sync"
                     }
                 };
 
-                statusText.innerText = "Household verified. Saving vehicle profile...";
+                statusText.innerText = "Household verified. Injecting asset row into vehicles table...";
 
-                // 3. Inject record into PostgreSQL table
+                // 3. Fire parsed payload into live Postgres asset table
                 const { data: vehicle, error: vErr } = await supabase
                     .from('vehicles')
                     .insert([payload])
@@ -96,18 +88,18 @@
                     
                 if (vErr) throw vErr;
 
-                // Build complete verification display output
-                statusText.className = "text-green-400";
-                statusText.innerHTML = `🎉 <b>SUCCESS!</b> Database record synchronized.<br/><br/>` +
-                                       `<b>Row UUID:</b> ${vehicle[0].id}<br/>` +
-                                       `<b>Extracted Specs:</b> ${JSON.stringify(vehicle[0].custom_spec_fields)}`;
+                // Success confirmation presentation
+                statusText.style.color = "#34d399";
+                statusText.innerHTML = `🎉 <b>SUCCESS!</b> Connection verified.<br><br>` +
+                                       `<b>Row UUID:</b> ${vehicle[0].id}<br>` +
+                                       `<b>Stored Metadata:</b> ${JSON.stringify(vehicle[0].custom_spec_fields)}`;
                 
-                smartInput.value = ""; // Clear input for standard loop reset
+                smartInput.value = "";
 
             } catch (error) {
-                statusText.className = "text-red-400";
-                statusText.innerText = `❌ Error routing record: ${error.message}`;
-                console.error(error);
+                statusText.style.color = "#f87171";
+                statusText.innerText = `❌ Terminal Error: ${error.message}`;
+                alert("Database Connection Error:\n" + error.message);
             }
         });
     </script>
