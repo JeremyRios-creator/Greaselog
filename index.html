@@ -56,16 +56,23 @@
 
             try {
                 // 1. Establish or read valid multi-tenant Household reference
-                let { data: household } = await supabase.from('households').select('*').limit(1);
-                let householdId;
+let { data: household, error: fetchErr } = await supabase.from('households').select('*');
+let householdId;
 
-                if (household && household.length > 0) {
-                    householdId = household[0].id;
-                } else {
-                    const { data: newH, error: hErr } = await supabase.from('households').insert([{ name: "My Project Garage" }]).select().single();
-                    if (hErr) throw hErr;
-                    householdId = newH.id;
-                }
+if (household && household.length > 0) {
+    // A household exists, use it
+    householdId = household[0].id;
+} else {
+    // No household exists yet, let's create the very first one right now
+    const { data: newH, error: hErr } = await supabase
+        .from('households')
+        .insert([{ name: "My Project Garage" }])
+        .select();
+
+    if (hErr) throw hErr;
+    if (!newH || newH.length === 0) throw new Error("Database failed to return the new household row.");
+    householdId = newH[0].id;
+}
 
                 // 2. Client Side Parsing Layer (Isolates metadata from string)
                 const yearMatch = rawText.match(/\b(19\d{2}|20\d{2})\b/);
