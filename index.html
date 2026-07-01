@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greaselog Staging GUI</title>
+    <!-- Tailwind CSS Engine for UI Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-md w-full bg-gray-800 p-6 rounded-xl shadow-2xl border border-gray-700">
+        <h1 class="text-2xl font-bold mb-2 text-indigo-400">⚡ Greaselog Smart Input</h1>
+        <p class="text-sm text-gray-400 mb-6">Type your vehicle configurations naturally. No rigid dropdown arrays.</p>
+
+        <!-- Dynamic Asset Submission Form -->
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Vehicle Entry String</label>
+                <input id="smartInput" type="text" placeholder="e.g., 1969 Cougar 351c Restoration" 
+                       class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-200 focus:outline-none focus:border-indigo-500 transition-colors">
+            </div>
+
+            <button id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-colors shadow-lg">
+                Log Asset to Supabase Table
+            </button>
+        </div>
+
+        <!-- Terminal Status Monitoring Box -->
+        <div id="statusBox" class="mt-6 p-4 rounded-lg bg-gray-900 border border-gray-800 text-xs font-mono hidden">
+            <p id="statusText" class="text-gray-400">Awaiting user input execution...</p>
+        </div>
+    </div>
+
+    <!-- CDN Framework Integration for Serverless DB Operations -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // CONFIGURATION: Insert your live Supabase API endpoints here
+        const supabaseUrl = 'https://qjiwirnetqvynraphzfg.supabase.co/rest/v1/';
+        const supabaseKey = 'sb_publishable_uPajrAE_ijWlRtwzzmBmgw_SuqKDgOy';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        const submitBtn = document.getElementById('submitBtn');
+        const smartInput = document.getElementById('smartInput');
+        const statusBox = document.getElementById('statusBox');
+        const statusText = document.getElementById('statusText');
+
+        submitBtn.addEventListener('click', async () => {
+            const rawText = smartInput.value.trim();
+            if(!rawText) return alert("Please type something first!");
+
+            // Trigger active UI state indicators
+            statusBox.classList.remove('hidden');
+            statusText.className = "text-yellow-400 animate-pulse";
+            statusText.innerText = "Processing custom regex logic & executing database pipeline...";
+
+            try {
+                // 1. Establish or read valid multi-tenant Household reference
+                let { data: household } = await supabase.from('households').select('*').limit(1);
+                let householdId;
+
+                if (household && household.length > 0) {
+                    householdId = household[0].id;
+                } else {
+                    const { data: newH, error: hErr } = await supabase.from('households').insert([{ name: "My Project Garage" }]).select().single();
+                    if (hErr) throw hErr;
+                    householdId = newH.id;
+                }
+
+                // 2. Client Side Parsing Layer (Isolates metadata from string)
+                const yearMatch = rawText.match(/\b(19\d{2}|20\d{2})\b/);
+                const engineMatch = rawText.match(/\b(\d\.\d[L|l]|\d{3}[c|c_i_d])\b/i);
+
+                const payload = {
+                    household_id: householdId,
+                    nickname: rawText,
+                    smart_search_string: rawText.toLowerCase(),
+                    custom_spec_fields: {
+                        detected_year: yearMatch ? yearMatch[0] : "Not Specified",
+                        detected_engine: engineMatch ? engineMatch[0] : "Not Specified",
+                        status: "Active Tracking Loop"
+                    }
+                };
+
+                // 3. Inject record into PostgreSQL table
+                const { data: vehicle, error: vErr } = await supabase.from('vehicles').insert([payload]).select().single();
+                if (vErr) throw vErr;
+
+                // Build complete verification display output
+                statusText.className = "text-green-400";
+                statusText.innerHTML = `🎉 <b>SUCCESS!</b> Database record synchronized.<br/><br/>` +
+                                       `<b>Row UUID:</b> ${vehicle.id}<br/>` +
+                                       `<b>Extracted JSONB Core:</b> ${JSON.stringify(vehicle.custom_spec_fields)}`;
+                
+                smartInput.value = ""; // Clear input for standard loop reset
+
+            } catch (error) {
+                statusText.className = "text-red-400";
+                statusText.innerText = `❌ Error routing record: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>
